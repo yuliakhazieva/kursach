@@ -40,7 +40,7 @@ def login():
         df = pd.DataFrame({'userid': []})
         for i in subscriptions:
             if api.groups.getMembers(i['id'], "id_asc", 0, 1)['count'] < 1000000:
-                
+
                 sys.stdout.write(i['name'])
 
     if form.validate_on_submit():
