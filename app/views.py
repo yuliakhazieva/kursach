@@ -13,7 +13,8 @@ from forms import LoginForm
 from wtforms import Form
 import vk
 
-session = vk.Session(access_token='e9adbde0e9adbde0e9adbde0f6e9cf3fa0ee9ade9adbde0b3769eff25ba6ca9496ad29a')
+session = vk.AuthSession(6464246, 'oppasaranhae@gmail.com', 'burnTHEfeel*19')
+#session = vk.Session(access_token='e9adbde0e9adbde0e9adbde0f6e9cf3fa0ee9ade9adbde0b3769eff25ba6ca9496ad29a')
 api = vk.API(session)
 
 @app_this.route('/')
@@ -40,34 +41,30 @@ def login():
     form = LoginForm()
     if request.method == 'POST':
         aaa = form.userid.data
-        vk_session = vk_api.VkApi('oppasaranhae@gmail.com', 'burnTHEfeel*19')
+
+        vk_session = vk_api.VkApi('oppasaranhae@gmail.com', 'burnTHEfeel*19', scope='subscriptions')
         vk_session.auth()
-        forExec = vk_session.get_api()
 
         min = 1000000
         mingid = 0
         ofs = 0
         while min >= 1000000:
-            subscriptions = api.users.getSubscriptions(user_id=int(aaa), extended=1, count=3, offeset = ofs, version=5.0, timeout=10)
-            for group in subscriptions:
-                memberCount = api.groups.getMembers(group_id=group['gid'], sort='id_asc', offset=0, count=0, version=5.0, timeout=10)['count']
+            vvv = vk_session.get_api()
+            subscriptions = vvv.users.getSubscriptions(user_id=int(aaa), extended=1, count=3, offeset = ofs, version=5.0, timeout=10)
+            #subscriptions = api.users.getSubscriptions(user_id=int(aaa), extended=1, count=3, offeset = ofs, version=5.0, timeout=10, token = vk_session.token)
+            for group in subscriptions['items']:
+                memberCount = api.groups.getMembers(group_id=group['id'], sort='id_asc', offset=0, count=0, version=5.0, timeout=10)['count']
                 if memberCount < min:
                     min = memberCount
-                    mingid = group['gid']
+                    mingid = group['id']
             ofs+=3
 
+        subscriptions = vvv.users.getSubscriptions(user_id=int(aaa), extended=1, version=5.0, timeout=10)
         df = pd.DataFrame({'userid': [0]})
         memberCount = api.groups.getMembers(group_id=mingid, sort='id_asc', offset=0,count=0, version = 5.0, timeout=10)['count']
         #для каждого куска по 1000 подписчиков этого паблика
         for i in range (1, memberCount/1000):
-            members = api.groups.getMembers(group_id=group['gid'], sort="id_asc", offest=i, version = 5.0, timeout=10)
-            #для каждого пользователя
-            vk_add = VkFunction(args=('version', 'members'), code='''
-                var userToGroups;
-                for (var member in members)
-                    userToGroups[member] = API.users.getSubscriptions(user_id=member, extended = 1, count = 20, version = 5.0, timeout=10);
-                return userToGroups;
-            ''')
+            members = api.groups.getMembers(group_id=group['id'], sort="id_asc", offest=i, version = 5.0, timeout=10)
 
             with vk_api.VkRequestsPool(vk_session) as pool:
                 dict = pool.method_one_param(
@@ -77,24 +74,19 @@ def login():
                     default_values={'extended': 1, 'count': 20, 'version': 5.0, 'timeout': 10}
                 )
 
-            print(dict.result['gid'])
-
-            for member in members['users']:
-                memebersearchedcount+=1
-                print(memebersearchedcount)
-                memberSubs = api.users.getSubscriptions(user_id=member, extended = 1, count = 20, version = 5.0, timeout=10);
-                if checkForTripleMatch(memberSubs, subscriptions, member):
+            for member in dict.result:
+                if checkForTripleMatch(dict.result[member]['items'], subscriptions['items']):
                     df.loc[df.shape[0]] = [0 for n in range(df.shape[1])]
                     #идём по всем его подпискам и добавляем в табличку
                     howHighUp = 21;
-                    for memberSub in memberSubs:
-                        if'gid' in memberSub:
+                    for memberSub in dict.result[member]['items']:
+                        if 'id' in memberSub:
                             howHighUp -= 1;
-                            if memberSub['gid'] in df:
-                                df.at[df.shape[0] - 1, memberSub['gid']] = howHighUp;
+                            if memberSub['id'] in df:
+                                df.at[df.shape[0] - 1, memberSub['id']] = howHighUp;
                             else:
-                                df[memberSub['gid']] = 0
-                                df.at[df.shape[0] - 1, memberSub['gid']] = howHighUp;
+                                df[memberSub['id']] = 0
+                                df.at[df.shape[0] - 1, memberSub['id']] = howHighUp;
 
     if form.validate_on_submit():
         return redirect('/index')
@@ -102,11 +94,15 @@ def login():
         title = 'Sign In',
         form = form)
 
-def checkForTripleMatch(membersubs, subscriptions, member):
+def checkForTripleMatch(membersubs, subscriptions):
     count = 0
     for sub in membersubs:
         if sub in subscriptions:
             count+=1;
             if count == 3:
+                print('count')
+                print(count)
                 return True
+    print('count')
+    print(count)
     return False
