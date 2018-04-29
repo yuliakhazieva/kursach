@@ -51,7 +51,6 @@ def login():
         while min >= 1000000:
             vvv = vk_session.get_api()
             subscriptions = vvv.users.getSubscriptions(user_id=int(aaa), extended=1, count=3, offeset = ofs, version=5.0, timeout=10)
-            #subscriptions = api.users.getSubscriptions(user_id=int(aaa), extended=1, count=3, offeset = ofs, version=5.0, timeout=10, token = vk_session.token)
             for group in subscriptions['items']:
                 memberCount = api.groups.getMembers(group_id=group['id'], sort='id_asc', offset=0, count=0, version=5.0, timeout=10)['count']
                 if memberCount < min:
@@ -63,9 +62,10 @@ def login():
         df = pd.DataFrame({'userid': [0]})
         memberCount = api.groups.getMembers(group_id=mingid, sort='id_asc', offset=0,count=0, version = 5.0, timeout=10)['count']
         #для каждого куска по 1000 подписчиков этого паблика
+        print('membercount')
+        print(memberCount)
         for i in range (1, memberCount/1000):
             members = api.groups.getMembers(group_id=group['id'], sort="id_asc", offest=i, version = 5.0, timeout=10)
-
             with vk_api.VkRequestsPool(vk_session) as pool:
                 dict = pool.method_one_param(
                     'users.getSubscriptions',
@@ -73,7 +73,7 @@ def login():
                     values = members['users'],
                     default_values={'extended': 1, 'count': 20, 'version': 5.0, 'timeout': 10}
                 )
-
+            print('chunk go')
             for member in dict.result:
                 if checkForTripleMatch(dict.result[member]['items'], subscriptions['items']):
                     df.loc[df.shape[0]] = [0 for n in range(df.shape[1])]
@@ -87,7 +87,7 @@ def login():
                             else:
                                 df[memberSub['id']] = 0
                                 df.at[df.shape[0] - 1, memberSub['id']] = howHighUp;
-
+            print(df)
     if form.validate_on_submit():
         return redirect('/index')
     return render_template('login.html', 
@@ -100,9 +100,5 @@ def checkForTripleMatch(membersubs, subscriptions):
         if sub in subscriptions:
             count+=1;
             if count == 3:
-                print('count')
-                print(count)
                 return True
-    print('count')
-    print(count)
     return False
