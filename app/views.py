@@ -64,16 +64,50 @@ def login():
         #для каждого куска по 1000 подписчиков этого паблика
         print('membercount')
         print(memberCount)
+        dict = {}
         for i in range (1, memberCount/1000):
-            members = api.groups.getMembers(group_id=group['id'], sort="id_asc", offest=i, version = 5.0, timeout=10)
+            # members = api.groups.getMembers(group_id=group['id'], sort="id_asc", offest=i*1000, version = 5.0, timeout=10)
+            # with vk_api.VkRequestsPool(vk_session) as pool:
+            #     for i in range (1, memberCount/1000):
+            #         dict = dict + pool.method_one_param(
+            #             'users.getSubscriptions',
+            #             key = 'user_id',
+            #             values = members['users'],
+            #             default_values={'extended': 1, 'count': 20, 'version': 5.0, 'timeout': 10, 'offset': i*1000}
+            #         )
+            # print('dict len')
+            # print(len(dict))
+
             with vk_api.VkRequestsPool(vk_session) as pool:
-                dict = pool.method_one_param(
-                    'users.getSubscriptions',
-                    key = 'user_id',
-                    values = members['users'],
-                    default_values={'extended': 1, 'count': 20, 'version': 5.0, 'timeout': 10}
-                )
-            print('chunk go')
+                k = 0
+                for i in range (0, memberCount/1000 - 1):
+                    print('mmc 1000')
+                    print(memberCount/1000)
+                    print('i')
+                    print(i)
+                    time.sleep(0.01)
+                    members = api.groups.getMembers(group_id=group['id'], sort="id_asc", offest=i*1000, version = 5.0, timeout=10)
+                    print('three')
+                    for member in members['users']:
+                        time.sleep(0.001)
+
+                        k+=1
+                        dict[member] = pool.method('users.getSubscriptions', {
+                            'user_id': member,
+                            'extended': 1, 'count': 20, 'version': 5.0, 'timeout': 10, 'offset': i * 1000
+                        })
+
+            print('boop')
+            for key, value in dict.items():
+                print('key')
+                print(key)
+                print('value.result')
+                print(value.result)
+                dict[key] = value.result
+
+            print('dict len')
+            print(len(dict))
+
             for member in dict.result:
                 if checkForTripleMatch(dict.result[member]['items'], subscriptions['items']):
                     df.loc[df.shape[0]] = [0 for n in range(df.shape[1])]
