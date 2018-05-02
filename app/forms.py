@@ -4,4 +4,4 @@ from wtforms.validators import DataRequired
 import requests
 
 class LoginForm(FlaskForm):
-    userid = IntegerField('userid', validators = [DataRequired()])
+    userid = StringField('userid', validators = [DataRequired()])
