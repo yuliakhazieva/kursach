@@ -3,6 +3,7 @@
 import sys
 import pandas as pd
 import multiprocessing
+import math
 from itertools import product
 import os
 import collections
@@ -24,7 +25,7 @@ with open('tokenFile.txt', 'r') as f:
     password = f.read()
 
 #стартуем сессии в обоих либах
-session = vk.AuthSession(6467194, 'oppasaranhae@gmail.com', password)
+session = vk.AuthSession(6467548, 'oppasaranhae@gmail.com', password)
 api = vk.API(session)
 vk_session = vk_api.VkApi('oppasaranhae@gmail.com', password, scope='subscriptions')
 vk_session.auth()
@@ -82,31 +83,44 @@ def login():
             ofs+=3
 
         subscriptions = vvv.users.getSubscriptions(user_id=int(aaa), extended=1, version=5.0, timeout=10)
-        df = pd.DataFrame({'userid': [0]})
+        df = pd.DataFrame({'userid': [0.0], 'pearson': [0.0], 'count': [0.0]})
+
+        rank = subscriptions['count']
+        for sub in subscriptions['items']:
+            df.at[0, sub['id']] = rank
+            rank-=1
         dict = {}
 
         members = api.groups.getMembers(group_id=group['id'], sort="id_asc", version=5.0, timeout=10)
+
+        print('getting subscriptions of potential friends')
+
+        # for k in range (0, members['count']/1000):
+        #     print(k)
         for i in range(0, 39):
             with vk_api.VkRequestsPool(vk_session) as pool:
                 for j in range (0 + 25 * i, 24 + 25 * i):
                     dict[members['users'][j]] = pool.method('users.getSubscriptions', {
                         'user_id': members['users'][j],
-                        'extended': 1, 'count': 20, 'version': 5.0, 'timeout': 10})
+                        'extended': 1, 'version': 5.0, 'timeout': 10})
+
 
         od = collections.OrderedDict(sorted(dict.items()))
         for key, value in od.items():
-            print(key)
             try:
                 dict[key] = value.result
             except:
-                dict[key] = {}
+                dict[key] = {'items':[]}
                 pass
 
+        print('filling the df')
         for member in dict:
             if checkForTripleMatch(dict[member]['items'], subscriptions['items']):
                 df.loc[df.shape[0]] = [0 for n in range(df.shape[1])]
                 #идём по всем его подпискам и добавляем в табличку
                 howHighUp = 21;
+                df.at[df.shape[0] - 1, 'userid'] = member
+                df.at[df.shape[0] - 1, 'count'] =  dict[member]['count']
                 for memberSub in dict[member]['items']:
                     if 'id' in memberSub:
                         howHighUp -= 1;
@@ -116,7 +130,52 @@ def login():
                             df[memberSub['id']] = 0
                             df.at[df.shape[0] - 1, memberSub['id']] = howHighUp;
 
+        print('calculating pearson')
+        df.at[0, 'count'] = subscriptions['count']
+        sumOfOurGrades = df.at[0, 'count'] * (df.at[0, 'count'] + 1) / 2
+
+        ourAvr = sumOfOurGrades / (len(df.columns) - 3)
+        sumOfAllPearsons = 0.0
+        for index, row in df.iterrows():
+            sumOfgrades = df.at[index, 'count']*(df.at[index, 'count'] + 1)/2
+            userAvr = sumOfgrades / (len(df.columns) - 3)
+
+            multSum = 0
+            ourSquaredSum = 0
+            userSquaredSum = 0
+
+            for col in range (3, df.shape[1] - 1):
+                userDiff = df.iat[index, col] - userAvr
+                ourDiff = df.iat[0, col] - ourAvr
+                multSum += userDiff * ourDiff
+                ourSquaredSum += ourDiff * ourDiff
+                userSquaredSum += userDiff * userDiff
+
+            df.at[index, 'pearson'] = multSum / math.sqrt(ourSquaredSum) / math.sqrt(userSquaredSum)
+            sumOfAllPearsons += df.at[index, 'pearson']
+
+
+        df = df.sort_values('pearson')
+        print('sorted')
         print(df)
+        df = df.drop(df.index[[int((df.shape[0] - 1)/100.0*15), df.shape[0] - 1]])
+        print('dropped 75 percent')
+        print(df)
+        df = df.loc[:, (df != 0).any(axis=0)]
+        print('dropped zeroes')
+        print(df)
+
+        df.loc[df.shape[0]] = [0 for n in range(df.shape[1])]
+        for col in range(3, df.shape[1] - 1):
+            corrTimesRank = 0.0
+            for index, row in df.iterrows():
+                if index != df.shape[0] - 1:
+                    corrTimesRank += df.at[row, 'pearson'] * df.iat[row, col]
+            df.iat[df.shape[0] - 1, col] = corrTimesRank/sumOfAllPearsons
+        df = df[df.columns[df.ix[df.last_valid_index()].argsort()]]
+        print('sorted by rec rank')
+        print(df)
+
 
     if form.validate_on_submit():
         return redirect('/index')
@@ -137,9 +196,7 @@ def checkForTripleMatch(membersubs, subscriptions):
         if sub in subscriptions:
             count+=1;
             if count == 3:
-                # print('count')
-                # print(count)
+                print(count)
                 return True
-    # print('count')
-    # print(count)
+    print(count)
     return False
