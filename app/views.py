@@ -82,7 +82,7 @@ def login():
                     mingid = group['id']
             ofs+=3
 
-        subscriptions = vvv.users.getSubscriptions(user_id=int(aaa), extended=1, version=5.0, timeout=10)
+        subscriptions = vvv.users.getSubscriptions(user_id=int(aaa), extended=1, version=5.0, timeout=10, count=200)
         df = pd.DataFrame({'userid': [0.0], 'pearson': [0.0], 'count': [0.0]})
 
         rank = subscriptions['count']
@@ -113,23 +113,26 @@ def login():
                 dict[key] = {'items':[]}
                 pass
 
+
+
         print('filling the df')
         for member in dict:
             if checkForTripleMatch(dict[member]['items'], subscriptions['items']):
                 df.loc[df.shape[0]] = [0 for n in range(df.shape[1])]
                 #идём по всем его подпискам и добавляем в табличку
-                howHighUp = 21;
+                howHighUp = dict[member]['count'] + 1
                 df.at[df.shape[0] - 1, 'userid'] = member
                 df.at[df.shape[0] - 1, 'count'] =  dict[member]['count']
                 for memberSub in dict[member]['items']:
                     if 'id' in memberSub:
-                        howHighUp -= 1;
+                        howHighUp -= 1
                         if memberSub['id'] in df:
-                            df.at[df.shape[0] - 1, memberSub['id']] = howHighUp;
+                            df.at[df.shape[0] - 1, memberSub['id']] = howHighUp
                         else:
                             df[memberSub['id']] = 0
-                            df.at[df.shape[0] - 1, memberSub['id']] = howHighUp;
+                            df.at[df.shape[0] - 1, memberSub['id']] = howHighUp
 
+        print(df)
         print('calculating pearson')
         df.at[0, 'count'] = subscriptions['count']
         sumOfOurGrades = df.at[0, 'count'] * (df.at[0, 'count'] + 1) / 2
@@ -151,18 +154,23 @@ def login():
                 ourSquaredSum += ourDiff * ourDiff
                 userSquaredSum += userDiff * userDiff
 
-            df.at[index, 'pearson'] = multSum / math.sqrt(ourSquaredSum) / math.sqrt(userSquaredSum)
+            df.at[index, 'pearson'] = abs(multSum / math.sqrt(ourSquaredSum) / math.sqrt(userSquaredSum))
             sumOfAllPearsons += df.at[index, 'pearson']
-
-
-        df = df.sort_values('pearson')
+        print(df)
+        df = df.sort_values('pearson', ascending=0)
         print('sorted')
         print(df)
-        df = df.drop(df.index[[int((df.shape[0] - 1)/100.0*15), df.shape[0] - 1]])
+        df.index = range(0, df.shape[0])
+        print('reindexed')
+        print(df)
+        df = df.drop(df.index[range(int((df.shape[0])/100.0*30), df.shape[0])])
         print('dropped 75 percent')
         print(df)
         df = df.loc[:, (df != 0).any(axis=0)]
         print('dropped zeroes')
+        print(df)
+        df.drop(df.iloc[:, 3:subscriptions['count']+3], inplace=True, axis=1)
+        print('dropped we are already subscribed to')
         print(df)
 
         df.loc[df.shape[0]] = [0 for n in range(df.shape[1])]
@@ -170,7 +178,7 @@ def login():
             corrTimesRank = 0.0
             for index, row in df.iterrows():
                 if index != df.shape[0] - 1:
-                    corrTimesRank += df.at[row, 'pearson'] * df.iat[row, col]
+                    corrTimesRank += df.at[index, 'pearson'] * df.iat[index, col]
             df.iat[df.shape[0] - 1, col] = corrTimesRank/sumOfAllPearsons
         df = df[df.columns[df.ix[df.last_valid_index()].argsort()]]
         print('sorted by rec rank')
@@ -195,8 +203,6 @@ def checkForTripleMatch(membersubs, subscriptions):
     for sub in membersubs:
         if sub in subscriptions:
             count+=1;
-            if count == 3:
-                print(count)
+            if count == 5:
                 return True
-    print(count)
     return False
