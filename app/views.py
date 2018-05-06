@@ -32,6 +32,9 @@ vk_session.auth()
 vvv = vk_session.get_api()
 
 outputTable = {}
+mapUserToLists = {}
+mapGroupToSubscribers = {}
+mapGroupToSubscribersRes = {}
 
 @app_this.route('/')
 @app_this.route('/index', methods=['GET', 'POST'])
@@ -60,19 +63,19 @@ def login():
             else:
                 aaa = ''
 
-        #находим в подписках любимый паблик с минимальным количеством людей
-        min = 1000000
-        mingid = 0
-        ofs = 0
-        while min >= 1000000:
-            subscriptions = vvv.users.getSubscriptions(user_id=int(aaa), extended=1, count=3, offeset = ofs, version=5.0, timeout=20)
-            for group in subscriptions['items']:
-                memberCount = api.groups.getMembers(group_id=group['id'], sort='id_asc', offset=0, count=0, version=5.0, timeout=20)['count']
-                if memberCount < min:
-                    min = memberCount
-                    mingid = group['id']
-            ofs+=3
-
+        # #находим в подписках любимый паблик с минимальным количеством людей
+        # min = 1000000
+        # mingid = 0
+        # ofs = 0
+        # while min >= 1000000:
+        #     subscriptions = vvv.users.getSubscriptions(user_id=int(aaa), extended=1, count=3, offeset = ofs, version=5.0, timeout=20)
+        #     for group in subscriptions['items']:
+        #         memberCount = api.groups.getMembers(group_id=group['id'], sort='id_asc', offset=0, count=0, version=5.0, timeout=20)['count']
+        #         if memberCount < min:
+        #             min = memberCount
+        #             mingid = group['id']
+        #     ofs+=3
+        #
         subscriptions = vvv.users.getSubscriptions(user_id=int(aaa), extended=1, version=5.0, timeout=10, count=200)
         df = pd.DataFrame({'userid': [0.0], 'pearson': [0.0], 'count': [0.0]})
 
@@ -87,29 +90,87 @@ def login():
         dict = {}
 
 
-        members = api.groups.getMembers(group_id=group['id'], sort="id_asc", version=5.0, timeout=10)
+        #members = api.groups.getMembers(group_id=group['id'], sort="id_asc", version=5.0, timeout=10)
 
-        print('getting subscriptions of potential friends')
+        #print('getting subscriptions of potential friends')
 
         # for k in range (0, members['count']/1000):
         #     print(k)
-        for i in range(0, 39):
-            with vk_api.VkRequestsPool(vk_session) as pool:
-                for j in range (0 + 25 * i, 24 + 25 * i):
-                    dict[members['users'][j]] = pool.method('users.getSubscriptions', {
-                        'user_id': members['users'][j],
-                        'extended': 1, 'version': 5.0, 'timeout': 10})
+        # for i in range(0, 39):
+        #     with vk_api.VkRequestsPool(vk_session) as pool:
+        #         for j in range (0 + 25 * i, 24 + 25 * i):
+        #             dict[members['users'][j]] = pool.method('users.getSubscriptions', {
+        #                 'user_id': members['users'][j],
+        #                 'extended': 1, 'version': 5.0, 'timeout': 10})
+
+        #для каждой группы
+        # for group in subscriptions['items']:
+        for t in range(0, 3):
+            group = subscriptions['items'][t]
+            if 'name' in group:
+                print(group['name'])
+                memCount = api.groups.getMembers(group_id=group['id'], sort="id_asc", version=5.0, timeout=10)['count']
+                #для каждого куска по 25 тысяч
+                if(memCount/1000/25 > 0):
+                    firstUpperBound = memCount/1000/25
+                else:
+                    firstUpperBound = 1
+
+                for m in range (0, firstUpperBound):
+                    print(m)
+                    time.sleep(0.2)
+                    with vk_api.VkRequestsPool(vk_session) as pool:
+                        if m != memCount/1000/25:
+                            upperbound = 24 + 25 * m
+                        else:
+                            upperbound = memCount/1000
+
+                        for j in range(0 + 25 * m, upperbound):
+                            if group['id'] in mapGroupToSubscribers:
+                                mapGroupToSubscribers[group['id']] = mapGroupToSubscribers[group['id']] + [pool.method('groups.getMembers', {
+                                    'group_id': group['id'], 'sort': 'id_desc', 'offset': j * 1000})]
+                            else:
+                                mapGroupToSubscribers[group['id']] = [pool.method('groups.getMembers', {
+                                    'group_id': group['id'], 'sort': 'id_desc', 'offset': j * 1000})]
 
 
-        od = collections.OrderedDict(sorted(dict.items()))
-        for key, value in od.items():
+        # od = collections.OrderedDict(sorted(dict.items()))
+        # for key, value in od.items():
+        #     try:
+        #         dict[key] = value.result
+        #     except:
+        #         dict[key] = {'items':[]}
+        #         pass
+
+        for element in mapGroupToSubscribers.items():
             try:
-                dict[key] = value.result
+                for piece in element[1]:
+                    if element[0] in mapGroupToSubscribersRes:
+                        mapGroupToSubscribersRes[element[0]] = mapGroupToSubscribersRes[element[0]] + piece.result['items']
+                    else:
+                        mapGroupToSubscribersRes[element[0]] = [piece.result['items']]
             except:
-                dict[key] = {'items':[]}
                 pass
 
+        for key in mapGroupToSubscribersRes:
+            for val in mapGroupToSubscribersRes[key]:
+                print(type(val))
+                if(type(val) == list):
+                    print('boop')
+                    for el in val:
+                        if el in mapUserToLists:
+                            mapUserToLists[el] += 1
+                        else:
+                            mapUserToLists[el] = 1
+                else:
+                    print('beep')
+                    if val in mapUserToLists:
+                        mapUserToLists[val] += 1
+                    else:
+                        mapUserToLists[val] = 1
 
+        
+        print(mapUserToLists)
         print(df)
         print('filling the df')
         for member in dict:
