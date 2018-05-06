@@ -44,8 +44,8 @@
       <file leaf-file-name="views.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/app/views.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="154">
-              <caret line="171" column="8" selection-start-line="171" selection-start-column="8" selection-end-line="171" selection-end-column="29" />
+            <state relative-caret-position="62">
+              <caret line="120" column="34" selection-start-line="120" selection-start-column="34" selection-end-line="120" selection-end-column="34" />
               <folding>
                 <element signature="e#49#59#0" expanded="true" />
               </folding>
@@ -307,7 +307,7 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="426" y="173" width="1070" height="675" extended-state="0" />
+    <frame x="0" y="0" width="1440" height="900" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info anchor="bottom" id="TODO" order="6" />
@@ -315,14 +315,14 @@
       <window_info anchor="bottom" id="Database Changes" order="7" show_stripe_button="false" />
       <window_info anchor="bottom" id="Run" order="2" weight="0.14701602" />
       <window_info anchor="bottom" id="Version Control" order="7" />
-      <window_info active="true" anchor="bottom" id="Python Console" order="7" visible="true" weight="0.32972974" />
+      <window_info active="true" anchor="bottom" id="Python Console" order="7" visible="true" weight="0.22817954" />
       <window_info anchor="right" id="Coverage" side_tool="true" />
       <window_info anchor="bottom" id="Terminal" order="7" weight="0.3298791" />
-      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49462366" visible="true" weight="0.0" />
+      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49757674" visible="true" weight="0.0" />
       <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
       <window_info anchor="right" id="Database" order="3" />
       <window_info anchor="right" id="SciView" order="3" />
-      <window_info id="Structure" order="1" sideWeight="0.50537634" side_tool="true" visible="true" weight="0.0" />
+      <window_info id="Structure" order="1" sideWeight="0.5024233" side_tool="true" visible="true" weight="0.0" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.33153152" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
@@ -576,8 +576,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/app/views.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="154">
-          <caret line="171" column="8" selection-start-line="171" selection-start-column="8" selection-end-line="171" selection-end-column="29" />
+        <state relative-caret-position="62">
+          <caret line="120" column="34" selection-start-line="120" selection-start-column="34" selection-end-line="120" selection-end-column="34" />
           <folding>
             <element signature="e#49#59#0" expanded="true" />
           </folding>

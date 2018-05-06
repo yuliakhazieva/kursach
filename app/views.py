@@ -104,9 +104,9 @@ def login():
         #                 'extended': 1, 'version': 5.0, 'timeout': 10})
 
         #для каждой группы
-        # for group in subscriptions['items']:
-        for t in range(0, 3):
-            group = subscriptions['items'][t]
+        for group in subscriptions['items']:
+        # for t in range(0, 3):
+        #     group = subscriptions['items'][t]
             if 'name' in group:
                 print(group['name'])
                 memCount = api.groups.getMembers(group_id=group['id'], sort="id_asc", version=5.0, timeout=10)['count']
@@ -154,41 +154,38 @@ def login():
 
         for key in mapGroupToSubscribersRes:
             for val in mapGroupToSubscribersRes[key]:
-                print(type(val))
                 if(type(val) == list):
-                    print('boop')
                     for el in val:
                         if el in mapUserToLists:
                             mapUserToLists[el] += 1
                         else:
                             mapUserToLists[el] = 1
                 else:
-                    print('beep')
                     if val in mapUserToLists:
                         mapUserToLists[val] += 1
                     else:
                         mapUserToLists[val] = 1
 
-        
-        print(mapUserToLists)
+        mapUserToLists1 = {k: v for k, v in mapUserToLists.items() if v > subscriptions['count']/5}
+        print(mapUserToLists1)
         print(df)
+
         print('filling the df')
         for member in dict:
-            if checkForTripleMatch(dict[member]['items'], subscriptions['items']):
-                df.loc[df.shape[0]] = [0 for n in range(df.shape[1])]
-                #идём по всем его подпискам и добавляем в табличку
-                howHighUp = dict[member]['count'] + 1
-                df.at[df.shape[0] - 1, 'userid'] = member
-                df.at[df.shape[0] - 1, 'count'] =  dict[member]['count']
-                for memberSub in dict[member]['items']:
-                    if 'id' in memberSub:
-                        howHighUp -= 1
-                        if memberSub['id'] in df:
-                            df.at[df.shape[0] - 1, memberSub['id']] = str(howHighUp)
-                        else:
-                            df[memberSub['id']] = str(0)
-                            df.at[1, memberSub['id']] = memberSub['name']
-                            df.at[df.shape[0] - 1, memberSub['id']] = str(howHighUp)
+            df.loc[df.shape[0]] = [0 for n in range(df.shape[1])]
+            #идём по всем его подпискам и добавляем в табличку
+            howHighUp = dict[member]['count'] + 1
+            df.at[df.shape[0] - 1, 'userid'] = member
+            df.at[df.shape[0] - 1, 'count'] =  dict[member]['count']
+            for memberSub in dict[member]['items']:
+                if 'id' in memberSub:
+                    howHighUp -= 1
+                    if memberSub['id'] in df:
+                        df.at[df.shape[0] - 1, memberSub['id']] = str(howHighUp)
+                    else:
+                        df[memberSub['id']] = str(0)
+                        df.at[1, memberSub['id']] = memberSub['name']
+                        df.at[df.shape[0] - 1, memberSub['id']] = str(howHighUp)
 
         print(df)
         print('calculating pearson')
