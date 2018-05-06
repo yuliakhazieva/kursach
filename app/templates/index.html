@@ -1,7 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Генератор рекомендаций пабликов</h1>
-{% for post in posts %}
-<div><p>{{post.author.nickname}} says: <b>{{post.body}}</b></p></div>
-{% endfor %}
+<table border = 1>
+         {% for key, value in outputTable.iteritems() %}
+
+            <tr>
+               <th> {{ key }} </th>
+               <td> {{ value }} </td>
+            </tr>
+
+         {% endfor %}
+</table>
 {% endblock %}
