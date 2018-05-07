@@ -3,8 +3,10 @@
 import sys
 import pandas as pd
 import multiprocessing
+from requests.adapters import HTTPAdapter
 import math
 import time
+import requests
 import vk_api
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -19,9 +21,13 @@ with open('tokenFile.txt', 'r') as f:
 
 #стартуем сессии в обоих либах
 session = vk.AuthSession(6470661, 'oppasaranhae@gmail.com', password)
+session.requests_session.keep_alive = False
+
 api = vk.API(session)
 vk_session = vk_api.VkApi('oppasaranhae@gmail.com', password, scope='subscriptions')
 vk_session.auth()
+vk_session.http.mount('https://', HTTPAdapter(max_retries=10))
+
 vvv = vk_session.get_api()
 
 outputTable = {}
@@ -84,7 +90,7 @@ def login():
 
                 for m in range (0, firstUpperBound):
                     print(m)
-                    time.sleep(0.2)
+                    time.sleep(0.25)
                     with vk_api.VkRequestsPool(vk_session) as pool:
                         if m != memCount/1000/25:
                             upperbound = 24 + 25 * m
@@ -126,29 +132,39 @@ def login():
         relativePiece = 1
         mapUserToLists1 = {}
         while len(mapUserToLists1.keys()) == 0:
+            print('one')
             mapUserToLists1 = {k: v for k, v in mapUserToLists.items() if v > relativePiece}
             print(len(mapUserToLists1.keys()))
-            if len(mapUserToLists1.keys()) > 1000:
+            if len(mapUserToLists1.keys()) > 100:
+                print('two')
                 relativePiece += 1
                 mapUserToLists1 = {}
-            if len(mapUserToLists1.keys()) == 0:
+                print(len(mapUserToLists1.keys()))
+            elif len(mapUserToLists1.keys()) < 10:
+                print('three')
                 relativePiece -=1
                 mapUserToLists1 = {k: v for k, v in mapUserToLists.items() if v > relativePiece}
-
+                print(len(mapUserToLists1.keys()))
 
         print('len mupl1')
         print(len(mapUserToLists1))
         print('rel pie')
         print(relativePiece)
 
+        vk_session.http.close()
+        vk_session.auth()
         for j in range(0, len(mapUserToLists1)/25):
-            with vk_api.VkRequestsPool(vk_session) as pool:
-                if j != len(mapUserToLists1) / 25:
-                    upperbound = 24 + 25 * j
-                else:
-                    upperbound = len(mapUserToLists1) - 1
-                for g in range(0 + 25 * j, upperbound):
-                    dict[mapUserToLists1.keys()[g]] = pool.method('users.getSubscriptions', {'user_id':mapUserToLists1.keys()[g], 'extended':1, 'version':5.0, 'timeout':10, 'count':200})
+            print('beep')
+            try:
+                with vk_api.VkRequestsPool(vk_session) as pool:
+                    if j != len(mapUserToLists1) / 25:
+                        upperbound = 24 + 25 * j
+                    else:
+                        upperbound = len(mapUserToLists1) - 1
+                    for g in range(0 + 25 * j, upperbound):
+                        dict[mapUserToLists1.keys()[g]] = pool.method('users.getSubscriptions', {'user_id':mapUserToLists1.keys()[g], 'extended':1, 'version':5.0, 'timeout':10, 'count':200})
+            except:
+                api.http_handler(error=vk_api.exceptions.ApiHttpError)
 
         for key, value in dict.items():
             try:
@@ -157,17 +173,20 @@ def login():
                 dict.pop(key, None)
                 pass
 
-        print(dict)
+        dict.pop(aaa)
 
         print('filling the df')
         for member in dict:
+            print(member)
             df.loc[df.shape[0]] = [0 for n in range(df.shape[1])]
             #идём по всем его подпискам и добавляем в табличку
             howHighUp = dict[member]['count'] + 1
             df.at[df.shape[0] - 1, 'userid'] = member
             df.at[df.shape[0] - 1, 'count'] =  dict[member]['count']
             for memberSub in dict[member]['items']:
+                print(memberSub)
                 if 'name' in memberSub:
+                    print('boop')
                     howHighUp -= 1
                     if memberSub['id'] in df:
                         df.at[df.shape[0] - 1, memberSub['id']] = str(howHighUp)
@@ -207,9 +226,6 @@ def login():
         print(df)
         df.index = range(0, df.shape[0])
         print('reindexed')
-        print(df)
-        df = df.drop(df.index[range(int((df.shape[0])/100.0*30), df.shape[0])])
-        print('dropped 75 percent')
         print(df)
         df.drop(df.iloc[:, 3:subscriptions['count']+3], inplace=True, axis=1)
         print('dropped we are already subscribed to')
