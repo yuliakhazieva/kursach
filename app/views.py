@@ -4,21 +4,14 @@ import sys
 import pandas as pd
 import multiprocessing
 import math
-from itertools import product
-import os
-import collections
-import requests
 import time
 import vk_api
-from vk_api.execute import VkFunction
 reload(sys)
-from vk_api import exceptions
 sys.setdefaultencoding('utf-8')
 from flask import render_template, redirect, request
 from app import app_this
 from forms import LoginForm
 import vk
-from contextlib import contextmanager
 
 #читаем пароль из файлика
 with open('tokenFile.txt', 'r') as f:
@@ -63,19 +56,6 @@ def login():
             else:
                 aaa = ''
 
-        # #находим в подписках любимый паблик с минимальным количеством людей
-        # min = 1000000
-        # mingid = 0
-        # ofs = 0
-        # while min >= 1000000:
-        #     subscriptions = vvv.users.getSubscriptions(user_id=int(aaa), extended=1, count=3, offeset = ofs, version=5.0, timeout=20)
-        #     for group in subscriptions['items']:
-        #         memberCount = api.groups.getMembers(group_id=group['id'], sort='id_asc', offset=0, count=0, version=5.0, timeout=20)['count']
-        #         if memberCount < min:
-        #             min = memberCount
-        #             mingid = group['id']
-        #     ofs+=3
-        #
         subscriptions = vvv.users.getSubscriptions(user_id=int(aaa), extended=1, version=5.0, timeout=10, count=200)
         df = pd.DataFrame({'userid': [0.0], 'pearson': [0.0], 'count': [0.0]})
 
@@ -88,20 +68,6 @@ def login():
                 df.at[1, 'pearson'] = 0.999
             rank-=1
         dict = {}
-
-
-        #members = api.groups.getMembers(group_id=group['id'], sort="id_asc", version=5.0, timeout=10)
-
-        #print('getting subscriptions of potential friends')
-
-        # for k in range (0, members['count']/1000):
-        #     print(k)
-        # for i in range(0, 39):
-        #     with vk_api.VkRequestsPool(vk_session) as pool:
-        #         for j in range (0 + 25 * i, 24 + 25 * i):
-        #             dict[members['users'][j]] = pool.method('users.getSubscriptions', {
-        #                 'user_id': members['users'][j],
-        #                 'extended': 1, 'version': 5.0, 'timeout': 10})
 
         #для каждой группы
         for group in subscriptions['items']:
@@ -133,15 +99,6 @@ def login():
                                 mapGroupToSubscribers[group['id']] = [pool.method('groups.getMembers', {
                                     'group_id': group['id'], 'sort': 'id_desc', 'offset': j * 1000})]
 
-
-        # od = collections.OrderedDict(sorted(dict.items()))
-        # for key, value in od.items():
-        #     try:
-        #         dict[key] = value.result
-        #     except:
-        #         dict[key] = {'items':[]}
-        #         pass
-
         for element in mapGroupToSubscribers.items():
             try:
                 for piece in element[1]:
@@ -166,9 +123,41 @@ def login():
                     else:
                         mapUserToLists[val] = 1
 
-        mapUserToLists1 = {k: v for k, v in mapUserToLists.items() if v > subscriptions['count']/5}
-        print(mapUserToLists1)
-        print(df)
+        relativePiece = 1
+        mapUserToLists1 = {}
+        while len(mapUserToLists1.keys()) == 0:
+            mapUserToLists1 = {k: v for k, v in mapUserToLists.items() if v > relativePiece}
+            print(len(mapUserToLists1.keys()))
+            if len(mapUserToLists1.keys()) > 1000:
+                relativePiece += 1
+                mapUserToLists1 = {}
+            if len(mapUserToLists1.keys()) == 0:
+                relativePiece -=1
+                mapUserToLists1 = {k: v for k, v in mapUserToLists.items() if v > relativePiece}
+
+
+        print('len mupl1')
+        print(len(mapUserToLists1))
+        print('rel pie')
+        print(relativePiece)
+
+        for j in range(0, len(mapUserToLists1)/25):
+            with vk_api.VkRequestsPool(vk_session) as pool:
+                if j != len(mapUserToLists1) / 25:
+                    upperbound = 24 + 25 * j
+                else:
+                    upperbound = len(mapUserToLists1) - 1
+                for g in range(0 + 25 * j, upperbound):
+                    dict[mapUserToLists1.keys()[g]] = pool.method('users.getSubscriptions', {'user_id':mapUserToLists1.keys()[g], 'extended':1, 'version':5.0, 'timeout':10, 'count':200})
+
+        for key, value in dict.items():
+            try:
+                dict[key] = value.result
+            except:
+                dict.pop(key, None)
+                pass
+
+        print(dict)
 
         print('filling the df')
         for member in dict:
@@ -178,7 +167,7 @@ def login():
             df.at[df.shape[0] - 1, 'userid'] = member
             df.at[df.shape[0] - 1, 'count'] =  dict[member]['count']
             for memberSub in dict[member]['items']:
-                if 'id' in memberSub:
+                if 'name' in memberSub:
                     howHighUp -= 1
                     if memberSub['id'] in df:
                         df.at[df.shape[0] - 1, memberSub['id']] = str(howHighUp)
@@ -238,7 +227,7 @@ def login():
         print(df)
 
         for f in range (df.shape[1] - 10, df.shape[1]):
-            outputTable[df.iat[1, f]] = 'vk.com/public' + df.columns[f]
+            outputTable[df.iat[1, f]] = 'vk.com/public' + str(df.columns[f])
 
         print(outputTable)
 
