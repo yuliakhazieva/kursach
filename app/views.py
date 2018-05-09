@@ -76,9 +76,9 @@ def login():
         dict = {}
 
         #для каждой группы
-        for group in subscriptions['items']:
-        # for t in range(0, 3):
-        #     group = subscriptions['items'][t]
+        # for group in subscriptions['items']:
+        for t in range(0, 3):
+            group = subscriptions['items'][t]
             if 'name' in group:
                 print(group['name'])
                 memCount = api.groups.getMembers(group_id=group['id'], sort="id_asc", version=5.0, timeout=10)['count']
@@ -173,7 +173,8 @@ def login():
                 dict.pop(key, None)
                 pass
 
-        dict.pop(aaa)
+        if aaa in dict.keys():
+            dict.pop(aaa)
 
         print('filling the df')
         for member in dict:
@@ -184,7 +185,6 @@ def login():
             df.at[df.shape[0] - 1, 'userid'] = member
             df.at[df.shape[0] - 1, 'count'] =  dict[member]['count']
             for memberSub in dict[member]['items']:
-                print(memberSub)
                 if 'name' in memberSub:
                     print('boop')
                     howHighUp -= 1
@@ -231,6 +231,10 @@ def login():
         print('dropped we are already subscribed to')
         print(df)
 
+        dfPart = df.loc[2:, (df).sum(axis=0) > 0]
+        print('try drop zeroes')
+        print(dfPart)
+
         df.loc[df.shape[0]] = [0 for n in range(df.shape[1])]
         for col in range(3, df.shape[1] - 1):
             corrTimesRank = 0.0
@@ -242,8 +246,13 @@ def login():
         print('sorted by rec rank')
         print(df)
 
-        for f in range (df.shape[1] - 10, df.shape[1]):
-            outputTable[df.iat[1, f]] = 'vk.com/public' + str(df.columns[f])
+        outputCount = 10
+        f = df.shape[1]
+        while outputCount != 0 and f != 2:
+            f-=1
+            if api.groups.getMembers(group_id=group['id'], sort="id_asc", version=5.0, timeout=10)['count'] < 1000000:
+                outputTable[df.iat[1, f]] = 'vk.com/public' + str(df.columns[f])
+                outputCount -= 1
 
         print(outputTable)
 
@@ -265,7 +274,7 @@ def checkForTripleMatch(membersubs, subscriptions):
     count = 0
     for sub in membersubs:
         if sub in subscriptions:
-            count+=1;
+            count+=1
             if count == 5:
                 return True
     return False
