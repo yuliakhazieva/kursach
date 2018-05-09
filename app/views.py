@@ -30,7 +30,7 @@ vk_session.http.mount('https://', HTTPAdapter(max_retries=10))
 
 vvv = vk_session.get_api()
 
-outputTable = {}
+outputTable = {'':''}
 mapUserToLists = {}
 mapGroupToSubscribers = {}
 mapGroupToSubscribersRes = {}
@@ -49,7 +49,7 @@ def login():
     form = LoginForm()
     if request.method == 'POST':
 
-        #парсим значение формы
+        #парсим значение формы с ссылкой на профиль
         aaa = ''
         while aaa == '':
             aaa = form.userid.data
@@ -61,6 +61,9 @@ def login():
                 print(aaa)
             else:
                 aaa = ''
+
+        subscriptionsCountInput = form.Subscriptionscount.data
+        friendsCountInput = form.FriendsCount.data
 
         subscriptions = vvv.users.getSubscriptions(user_id=int(aaa), extended=1, version=5.0, timeout=10, count=200)
         df = pd.DataFrame({'userid': [0.0], 'pearson': [0.0], 'count': [0.0]})
@@ -77,7 +80,7 @@ def login():
 
         #для каждой группы
         # for group in subscriptions['items']:
-        for t in range(0, 3):
+        for t in range(0, subscriptionsCountInput):
             group = subscriptions['items'][t]
             if 'name' in group:
                 print(group['name'])
@@ -135,7 +138,7 @@ def login():
             print('one')
             mapUserToLists1 = {k: v for k, v in mapUserToLists.items() if v > relativePiece}
             print(len(mapUserToLists1.keys()))
-            if len(mapUserToLists1.keys()) > 100:
+            if len(mapUserToLists1.keys()) > friendsCountInput:
                 print('two')
                 relativePiece += 1
                 mapUserToLists1 = {}
@@ -225,15 +228,14 @@ def login():
         print('sorted')
         print(df)
         df.index = range(0, df.shape[0])
+        if df.shape[0] > 300:
+            df = df.drop(df.index[range(int((df.shape[0]) / 100.0 * 30), df.shape[0])])
+        df.index = range(0, df.shape[0])
         print('reindexed')
         print(df)
         df.drop(df.iloc[:, 3:subscriptions['count']+3], inplace=True, axis=1)
         print('dropped we are already subscribed to')
         print(df)
-
-        dfPart = df.loc[2:, (df).sum(axis=0) > 0]
-        print('try drop zeroes')
-        print(dfPart)
 
         df.loc[df.shape[0]] = [0 for n in range(df.shape[1])]
         for col in range(3, df.shape[1] - 1):
@@ -246,7 +248,7 @@ def login():
         print('sorted by rec rank')
         print(df)
 
-        outputCount = 10
+        outputCount = 15
         f = df.shape[1]
         while outputCount != 0 and f != 2:
             f-=1

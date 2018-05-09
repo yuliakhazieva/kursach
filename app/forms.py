@@ -5,3 +5,5 @@ import requests
 
 class LoginForm(FlaskForm):
     userid = StringField('userid', validators = [DataRequired()])
+    Subscriptionscount = IntegerField('Subscriptionscount', validators = [DataRequired()])
+    FriendsCount = IntegerField('FriendsCount', validators = [DataRequired()])
