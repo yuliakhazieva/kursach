@@ -1,0 +1,20 @@
+Metadata-Version: 1.1
+Name: kaggle-cli
+Version: 0.12.13
+Summary: An unofficial Kaggle command line tool.
+Home-page: https://github.com/floydwch/kaggle-cli
+Author: floydwch
+Author-email: floydwch@gmail.com
+License: UNKNOWN
+Download-URL: https://github.com/floydwch/kaggle-cli/tarball/master
+Description: https://github.com/floydwch/kaggle-cli/blob/master/README.md
+Platform: Any
+Classifier: Development Status :: 3 - Alpha
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.4
+Classifier: Intended Audience :: Developers
+Classifier: Environment :: Console

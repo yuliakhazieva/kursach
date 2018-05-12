@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 # vim:fileencoding=utf-8
 import sys
+from scipy.sparse.linalg import svds
 import pandas as pd
-import multiprocessing
-from requests.adapters import HTTPAdapter
 import math
 import time
-import requests
 import vk_api
+import numpy as np
 reload(sys)
 sys.setdefaultencoding('utf-8')
 from flask import render_template, redirect, request
@@ -22,15 +21,16 @@ with open('tokenFile.txt', 'r') as f:
 #стартуем сессии в обоих либах
 session = vk.AuthSession(6470661, 'oppasaranhae@gmail.com', password)
 session.requests_session.keep_alive = False
-
 api = vk.API(session)
 vk_session = vk_api.VkApi('oppasaranhae@gmail.com', password, scope='subscriptions')
 vk_session.auth()
-vk_session.http.mount('https://', HTTPAdapter(max_retries=10))
-
 vvv = vk_session.get_api()
 
+percl = "qqq"
+
+#словари для мап редьюс
 outputTable = {'':''}
+outputTable2 = {'':''}
 mapUserToLists = {}
 mapGroupToSubscribers = {}
 mapGroupToSubscribersRes = {}
@@ -41,7 +41,7 @@ def index():
 
     return render_template("index.html",
         title = 'Рекомендации пабликов',
-        outputTable = outputTable)
+        outputTable = outputTable, outputTable2 = outputTable2)
 
 @app_this.route('/login', methods = ['GET', 'POST'])
 def login():
@@ -62,44 +62,49 @@ def login():
             else:
                 aaa = ''
 
+        #читаем прочие формы
         subscriptionsCountInput = form.Subscriptionscount.data
         friendsCountInput = form.FriendsCount.data
 
+        #читаем список подписок нашего пользоваетеля
         subscriptions = vvv.users.getSubscriptions(user_id=int(aaa), extended=1, version=5.0, timeout=10, count=200)
-        df = pd.DataFrame({'userid': [0.0], 'pearson': [0.0], 'count': [0.0]})
 
-        df.loc[df.shape[0]] = ['rrr' for n in range(df.shape[1])]
+        #задаем две таблицы данных и заполняем данными нашего пользователя
+        df = pd.DataFrame({'userid': [0.0], 'pearson': [0.0], 'count': [0.0]})
+        publics_df = pd.DataFrame({'public_id': [0], 'public_name': ['']})
         rank = subscriptions['count']
         for sub in subscriptions['items']:
             if 'name' in sub:
-                df.at[0, sub['id']] = str(rank)
-                df.at[1, sub['id']] = sub['name']
-                df.at[1, 'pearson'] = 0.999
+                df.at[0, sub['id']] = rank
+                publics_df.loc[publics_df.shape[0]] = [sub['id'], sub['name']]
             rank-=1
-        dict = {}
+        df.at[0, 'count'] = subscriptions['count']
+        sumOfOurGrades = df.shape[1] - 3 * (df.shape[1] - 3 + 1) / 2
 
-        #для каждой группы
-        # for group in subscriptions['items']:
+        print('init')
+        print(df)
+        print(publics_df)
+
+
+
+        #из указанного количества подписок берем пользователей
         for t in range(0, subscriptionsCountInput):
             group = subscriptions['items'][t]
             if 'name' in group:
-                print(group['name'])
                 memCount = api.groups.getMembers(group_id=group['id'], sort="id_asc", version=5.0, timeout=10)['count']
-                #для каждого куска по 25 тысяч
+
                 if(memCount/1000/25 > 0):
                     firstUpperBound = memCount/1000/25
                 else:
                     firstUpperBound = 1
 
                 for m in range (0, firstUpperBound):
-                    print(m)
                     time.sleep(0.25)
                     with vk_api.VkRequestsPool(vk_session) as pool:
                         if m != memCount/1000/25:
                             upperbound = 24 + 25 * m
                         else:
                             upperbound = memCount/1000
-
                         for j in range(0 + 25 * m, upperbound):
                             if group['id'] in mapGroupToSubscribers:
                                 mapGroupToSubscribers[group['id']] = mapGroupToSubscribers[group['id']] + [pool.method('groups.getMembers', {
@@ -108,6 +113,7 @@ def login():
                                 mapGroupToSubscribers[group['id']] = [pool.method('groups.getMembers', {
                                     'group_id': group['id'], 'sort': 'id_desc', 'offset': j * 1000})]
 
+        #берем результаты запроса
         for element in mapGroupToSubscribers.items():
             try:
                 for piece in element[1]:
@@ -118,6 +124,7 @@ def login():
             except:
                 pass
 
+        #МАП пользователь - количество упоминаний
         for key in mapGroupToSubscribersRes:
             for val in mapGroupToSubscribersRes[key]:
                 if(type(val) == list):
@@ -134,30 +141,22 @@ def login():
 
         relativePiece = 1
         mapUserToLists1 = {}
+
+        #уменьшаем размер рассматриваемых пользователей в целях экономии времени
         while len(mapUserToLists1.keys()) == 0:
-            print('one')
             mapUserToLists1 = {k: v for k, v in mapUserToLists.items() if v > relativePiece}
-            print(len(mapUserToLists1.keys()))
             if len(mapUserToLists1.keys()) > friendsCountInput:
-                print('two')
                 relativePiece += 1
                 mapUserToLists1 = {}
-                print(len(mapUserToLists1.keys()))
             elif len(mapUserToLists1.keys()) < 10:
-                print('three')
                 relativePiece -=1
                 mapUserToLists1 = {k: v for k, v in mapUserToLists.items() if v > relativePiece}
-                print(len(mapUserToLists1.keys()))
 
-        print('len mupl1')
-        print(len(mapUserToLists1))
-        print('rel pie')
-        print(relativePiece)
-
+        #берем подписки этих пользователей
+        dict = {}
         vk_session.http.close()
         vk_session.auth()
         for j in range(0, len(mapUserToLists1)/25):
-            print('beep')
             try:
                 with vk_api.VkRequestsPool(vk_session) as pool:
                     if j != len(mapUserToLists1) / 25:
@@ -169,6 +168,7 @@ def login():
             except:
                 api.http_handler(error=vk_api.exceptions.ApiHttpError)
 
+        #записываем результат запроса
         for key, value in dict.items():
             try:
                 dict[key] = value.result
@@ -176,67 +176,75 @@ def login():
                 dict.pop(key, None)
                 pass
 
+        #убираем нашего пользователя из словаря
         if aaa in dict.keys():
             dict.pop(aaa)
 
-        print('filling the df')
+        #заносим данные в таблицы
         for member in dict:
-            print(member)
             df.loc[df.shape[0]] = [0 for n in range(df.shape[1])]
-            #идём по всем его подпискам и добавляем в табличку
             howHighUp = dict[member]['count'] + 1
             df.at[df.shape[0] - 1, 'userid'] = member
             df.at[df.shape[0] - 1, 'count'] =  dict[member]['count']
             for memberSub in dict[member]['items']:
                 if 'name' in memberSub:
-                    print('boop')
                     howHighUp -= 1
                     if memberSub['id'] in df:
                         df.at[df.shape[0] - 1, memberSub['id']] = str(howHighUp)
                     else:
-                        df[memberSub['id']] = str(0)
-                        df.at[1, memberSub['id']] = memberSub['name']
+                        df[memberSub['id']] = 0
                         df.at[df.shape[0] - 1, memberSub['id']] = str(howHighUp)
+                        publics_df.loc[publics_df.shape[0]] = [memberSub['id'], memberSub['name']]
 
+        print('fill df')
         print(df)
-        print('calculating pearson')
-        df.at[0, 'count'] = subscriptions['count']
-        sumOfOurGrades = df.at[0, 'count'] * (df.at[0, 'count'] + 1) / 2
+        print(publics_df)
 
         ourAvr = sumOfOurGrades / (len(df.columns) - 3)
         sumOfAllPearsons = 0.0
+
+        #считаем коэф пирсона
         for index, row in df.iterrows():
-            if index != 1:
-                sumOfgrades = int(df.at[index, 'count'])*(int(df.at[index, 'count']) + 1)/2
-                userAvr = sumOfgrades / (len(df.columns) - 3)
+            sumOfgrades = int(df.at[index, 'count'])*(int(df.at[index, 'count']) + 1)/2
+            userAvr = sumOfgrades / (len(df.columns) - 3)
 
-                multSum = 0
-                ourSquaredSum = 0
-                userSquaredSum = 0
+            multSum = 0
+            ourSquaredSum = 0
+            userSquaredSum = 0
 
-                for col in range (3, df.shape[1] - 1):
-                    userDiff = int(df.iat[index, col]) - userAvr
-                    ourDiff = int(df.iat[0, col]) - ourAvr
-                    multSum += userDiff * ourDiff
-                    ourSquaredSum += ourDiff * ourDiff
-                    userSquaredSum += userDiff * userDiff
+            for col in range (3, df.shape[1] - 1):
+                userDiff = int(df.iat[index, col]) - userAvr
+                ourDiff = int(df.iat[0, col]) - ourAvr
+                multSum += userDiff * ourDiff
+                ourSquaredSum += ourDiff * ourDiff
+                userSquaredSum += userDiff * userDiff
 
-                df.at[index, 'pearson'] = abs(multSum / math.sqrt(ourSquaredSum) / math.sqrt(userSquaredSum))
-                sumOfAllPearsons += df.at[index, 'pearson']
+            df.at[index, 'pearson'] = abs(multSum / math.sqrt(ourSquaredSum) / math.sqrt(userSquaredSum))
+            sumOfAllPearsons += df.at[index, 'pearson']
+
+        print('pearson')
         print(df)
+        print(publics_df)
+
         df = df.sort_values('pearson', ascending=0)
         print('sorted')
         print(df)
+        print(publics_df)
+
         df.index = range(0, df.shape[0])
         if df.shape[0] > 300:
             df = df.drop(df.index[range(int((df.shape[0]) / 100.0 * 30), df.shape[0])])
         df.index = range(0, df.shape[0])
         print('reindexed')
         print(df)
+        print(publics_df)
+
         df.drop(df.iloc[:, 3:subscriptions['count']+3], inplace=True, axis=1)
         print('dropped we are already subscribed to')
         print(df)
+        print(publics_df)
 
+        #рассчитываем показатель рекоммендованности
         df.loc[df.shape[0]] = [0 for n in range(df.shape[1])]
         for col in range(3, df.shape[1] - 1):
             corrTimesRank = 0.0
@@ -247,21 +255,45 @@ def login():
         df = df[df.columns[df.ix[df.last_valid_index()].argsort()]]
         print('sorted by rec rank')
         print(df)
+        print(publics_df)
+
+        R_df =  df.drop(['pearson', 'count'], axis=1)
+        R_df.set_index('userid')
+        R = R_df.as_matrix()
+        user_ratings_mean = np.mean(R, axis=1)
+        R_demeaned = R - user_ratings_mean.reshape(-1, 1)
+        U, sigma, Vt = svds(R_demeaned, k=50)
+        sigma = np.diag(sigma)
+        all_user_predicted_ratings = np.dot(np.dot(U, sigma), Vt) + user_ratings_mean.reshape(-1, 1)
+        predictions_df = pd.DataFrame(all_user_predicted_ratings, columns=R_df.columns)
+
+        predictions_df = predictions_df.loc[[0]]
+        predictions_df = predictions_df[predictions_df.columns[predictions_df.ix[predictions_df.last_valid_index()].argsort()]]
+        print (predictions_df)
 
         outputCount = 15
         f = df.shape[1]
+        publics_df.set_index('public_id')
         while outputCount != 0 and f != 2:
             f-=1
-            if api.groups.getMembers(group_id=group['id'], sort="id_asc", version=5.0, timeout=10)['count'] < 1000000:
-                outputTable[df.iat[1, f]] = 'vk.com/public' + str(df.columns[f])
+            time.sleep(0.3)
+            if api.groups.getMembers(group_id=df.columns[f], sort="id_asc", version=5.0, timeout=10)['count'] < 1000000:
+                outputTable[publics_df.at[df.columns[f], 'public_name']] = 'vk.com/public' + str(df.columns[f])
                 outputCount -= 1
 
-        print(outputTable)
+        f = predictions_df.shape[1]
+        outputCount = 15
+        while outputCount != 0 and f != 0:
+            f-=1
+            time.sleep(0.3)
+            if api.groups.getMembers(group_id=df.columns[f], sort="id_asc", version=5.0, timeout=10)['count'] < 1000000:
+                outputTable2[publics_df.at[df.columns[f], 'public_name']] = 'vk.com/public' + str(df.columns[f])
+                outputCount -= 1
 
 
     if form.validate_on_submit():
         return redirect('/index')
-    return render_template('login.html', 
+    return render_template('login.html',
         title = 'Sign In',
         form = form)
 

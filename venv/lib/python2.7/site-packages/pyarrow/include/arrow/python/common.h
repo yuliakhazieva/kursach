@@ -1,0 +1,166 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+#ifndef ARROW_PYTHON_COMMON_H
+#define ARROW_PYTHON_COMMON_H
+
+#include <memory>
+#include <string>
+
+#include "arrow/python/config.h"
+
+#include "arrow/buffer.h"
+#include "arrow/util/macros.h"
+#include "arrow/util/visibility.h"
+
+namespace arrow {
+
+class MemoryPool;
+
+namespace py {
+
+class ARROW_EXPORT PyAcquireGIL {
+ public:
+  PyAcquireGIL() : acquired_gil_(false) { acquire(); }
+
+  ~PyAcquireGIL() { release(); }
+
+  void acquire() {
+    if (!acquired_gil_) {
+      state_ = PyGILState_Ensure();
+      acquired_gil_ = true;
+    }
+  }
+
+  // idempotent
+  void release() {
+    if (acquired_gil_) {
+      PyGILState_Release(state_);
+      acquired_gil_ = false;
+    }
+  }
+
+ private:
+  bool acquired_gil_;
+  PyGILState_STATE state_;
+  ARROW_DISALLOW_COPY_AND_ASSIGN(PyAcquireGIL);
+};
+
+#define PYARROW_IS_PY2 PY_MAJOR_VERSION <= 2
+
+// A RAII primitive that DECREFs the underlying PyObject* when it
+// goes out of scope.
+class ARROW_EXPORT OwnedRef {
+ public:
+  OwnedRef() : obj_(NULLPTR) {}
+  OwnedRef(OwnedRef&& other) : OwnedRef(other.detach()) {}
+  explicit OwnedRef(PyObject* obj) : obj_(obj) {}
+
+  ~OwnedRef() { reset(); }
+
+  void reset(PyObject* obj) {
+    Py_XDECREF(obj_);
+    obj_ = obj;
+  }
+
+  void reset() { reset(NULLPTR); }
+
+  PyObject* detach() {
+    PyObject* result = obj_;
+    obj_ = NULLPTR;
+    return result;
+  }
+
+  PyObject* obj() const { return obj_; }
+
+  PyObject** ref() { return &obj_; }
+
+ private:
+  ARROW_DISALLOW_COPY_AND_ASSIGN(OwnedRef);
+
+  PyObject* obj_;
+};
+
+// Same as OwnedRef, but ensures the GIL is taken when it goes out of scope.
+// This is for situations where the GIL is not always known to be held
+// (e.g. if it is released in the middle of a function for performance reasons)
+class ARROW_EXPORT OwnedRefNoGIL : public OwnedRef {
+ public:
+  OwnedRefNoGIL() : OwnedRef() {}
+  OwnedRefNoGIL(OwnedRefNoGIL&& other) : OwnedRef(other.detach()) {}
+  explicit OwnedRefNoGIL(PyObject* obj) : OwnedRef(obj) {}
+
+  ~OwnedRefNoGIL() {
+    PyAcquireGIL lock;
+    reset();
+  }
+};
+
+struct ARROW_EXPORT PyObjectStringify {
+  OwnedRef tmp_obj;
+  const char* bytes;
+  Py_ssize_t size;
+
+  explicit PyObjectStringify(PyObject* obj) {
+    PyObject* bytes_obj;
+    if (PyUnicode_Check(obj)) {
+      bytes_obj = PyUnicode_AsUTF8String(obj);
+      tmp_obj.reset(bytes_obj);
+      bytes = PyBytes_AsString(bytes_obj);
+      size = PyBytes_GET_SIZE(bytes_obj);
+    } else if (PyBytes_Check(obj)) {
+      bytes = PyBytes_AsString(obj);
+      size = PyBytes_GET_SIZE(obj);
+    } else {
+      bytes = NULLPTR;
+      size = -1;
+    }
+  }
+};
+
+Status CheckPyError(StatusCode code = StatusCode::UnknownError);
+
+Status PassPyError();
+
+// TODO(wesm): We can just let errors pass through. To be explored later
+#define RETURN_IF_PYERROR() RETURN_NOT_OK(CheckPyError());
+
+#define PY_RETURN_IF_ERROR(CODE) RETURN_NOT_OK(CheckPyError(CODE));
+
+// Return the common PyArrow memory pool
+ARROW_EXPORT void set_default_memory_pool(MemoryPool* pool);
+ARROW_EXPORT MemoryPool* get_memory_pool();
+
+class ARROW_EXPORT PyBuffer : public Buffer {
+ public:
+  /// While memoryview objects support multi-dimensional buffers, PyBuffer only supports
+  /// one-dimensional byte buffers.
+  ~PyBuffer();
+
+  static Status FromPyObject(PyObject* obj, std::shared_ptr<Buffer>* out);
+
+ private:
+  PyBuffer();
+  Status Init(PyObject*);
+
+  Py_buffer py_buf_;
+};
+
+}  // namespace py
+}  // namespace arrow
+
+#endif  // ARROW_PYTHON_COMMON_H

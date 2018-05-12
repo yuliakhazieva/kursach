@@ -15,3 +15,21 @@ label:hover {
     background: #eee;
     cursor: pointer
 }
+
+.clicker {
+width:100px;
+height:100px;
+background-color:blue;
+outline:none;
+cursor:pointer;
+}
+
+.hiddendiv{
+display:none;
+height:200px;
+background-color:green;
+}
+
+.clicker:focus + .hiddendiv{
+display:block;
+}

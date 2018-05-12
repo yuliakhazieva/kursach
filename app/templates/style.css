@@ -1,0 +1,17 @@
+body            { font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif; 
+   font-weight: 300; background: #2e81c9; text-align: center; color: #FFFFFF}
+hi {font-size: 30px}
+textarea {background-color: #2e80aa;}
+form {margin: 0 auto; border: #9C1A1C; border-bottom-width: 1px}
+#form {margin: 0 auto; border: #9C1A1C; border-bottom-width: 1px}
+label {
+ border:1px solid #ccc;
+ padding:10px;
+ margin:0 0 10px;
+ display:block;
+}
+
+label:hover {
+    background: #eee;
+    cursor: pointer
+}

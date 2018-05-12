@@ -1,0 +1,10 @@
+[console_scripts]
+kg = kaggle_cli.main:main
+
+[kaggle_cli]
+config = kaggle_cli.config:Config
+dataset = kaggle_cli.download:Dataset
+download = kaggle_cli.download:Download
+submissions = kaggle_cli.submissions:Submissions
+submit = kaggle_cli.submit:Submit
+

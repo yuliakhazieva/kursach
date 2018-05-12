@@ -1,6 +1,7 @@
 <!-- extend base layout -->
 {% extends "base.html" %}
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
 {% block content %}
     <div style="margin-top: 10%">
 <h1>ГЕНЕРАТОР РЕКОМЕНДУЕМЫХ ПУБЛИЧНЫХ СТРАНИЦ VK</h1>
@@ -25,20 +26,23 @@
         </div >
 
     <p>Сколько друзей по интересам отобрать до финального анализа?</p><p> Рекомендуемое значение: 200, рекомендумемые границы: 100 - 1 000. </p><p>Чем выше число, тем дольше будут вычисления, но точнее результат.</p>
-<form action="" method="post" name="login">
+<div action="" method="post" name="login">
     {{form.hidden_tag()}}
         <div id = "formFriendsCount" style = "margin-right: 0%">
         {{form.FriendsCount(size=30, placeholder='200')}}<br>
         </div >
 
 
-
-    <p style="margin-right: 0%"><input type="submit" value="Сгенерировать"></p>
+    <div class="clicker" tabindex="1">
+    <p style="margin-right: 0%">
+    <input type="submit" value="Сгенерировать"></p></div>
     </div>
+    <div class="hiddendiv"><img src="https://vk.com/doc21875431_465851457?hash=f3c945dd39f5c614e2&dl=38ec63d231c0e52503&wnd=1&module=im" height="50"></div>
     <br>
     <br>
     <p>Для связи: oppasaranhae@gmail.com</p>
     <p>НИУ ВШЭ 2018 Хазиева Юлия руководитель: Ахметсафина Римма Закиевна</p>
-</form>
-    </div>
+
+
+</form></div>
 {% endblock %}
