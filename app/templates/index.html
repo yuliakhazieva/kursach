@@ -22,4 +22,15 @@
 
      {% endfor %}
 </table>
+
+<table border = 1>
+     {% for key, value in friends.iteritems() %}
+
+        <tr>
+            <th> <a href="{{ key }}"> {{ key }}</a> </th>
+           <td> {{ value }} </td>
+        </tr>
+
+     {% endfor %}
+</table>
 {% endblock %}
