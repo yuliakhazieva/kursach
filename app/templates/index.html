@@ -1,34 +1,30 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Генератор рекомендаций пабликов</h1>
-<table border = 1 style="display: inline-block">
+<table style="display: inline-block; border: 4px solid #E26803">
          {% for key, value in outputTable.iteritems() %}
 
             <tr>
-               <th> {{ key }} </th>
-               <td> {{ value }} </td>
+               <th> <a href="{{ value }}"> {{ key }}</a> </th>
             </tr>
 
          {% endfor %}
 </table>
 
-<table border = 1 style="display: inline-block">
+<table style="display: inline-block; border: 4px solid #E26803">
      {% for key, value in outputTable2.iteritems() %}
 
         <tr>
-           <th> {{ key }} </th>
-           <td> {{ value }} </td>
+           <th> <a href="{{ value }}"> {{ key }}</a> </th>
         </tr>
 
      {% endfor %}
 </table>
 
-<table border = 1>
+<table style="border: 4px solid #E26803">
      {% for key, value in friends.iteritems() %}
-
         <tr>
-            <th> <a href="{{ key }}"> {{ key }}</a> </th>
-           <td> {{ value }} </td>
+            <th> <a href="{{ key }}"> {{ value }}</a> </th>
         </tr>
 
      {% endfor %}

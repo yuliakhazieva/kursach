@@ -50,20 +50,36 @@ def login():
 
         #парсим значение формы с ссылкой на профиль
         aaa = ''
-        while aaa == '':
-            aaa = form.userid.data
-            if aaa[:9] == 'vk.com/id':
-                if not RepresentsInt(aaa[9:]):
-                    aaa = ''
-            if aaa[:7] == 'vk.com/':
-                aaa = vvv.users.get(user_ids = aaa[7:])[0]['id']
-                print(aaa)
-            else:
+        aaa = form.userid.data
+        if aaa[:9] == 'vk.com/id':
+            if not RepresentsInt(aaa[9:]):
                 aaa = ''
+        elif aaa[:7] == 'vk.com/':
+            aaa = vvv.users.get(user_ids = aaa[7:])[0]['id']
+            print(aaa)
+        else:
+            aaa = ''
 
         #читаем прочие формы
         subscriptionsCountInput = form.Subscriptionscount.data
         friendsCountInput = form.FriendsCount.data
+
+        if form.validate_on_submit():
+            if RepresentsInt(subscriptionsCountInput) and RepresentsInt(friendsCountInput):
+                if subscriptionsCountInput >= 1 and friendsCountInput >= 1 and aaa[:7] == 'vk.com/':
+                    return redirect('/index')
+                else:
+                    return render_template('login.html',
+                                    title='Sign In',
+                                    form=form, message="Неверные данные")
+            else:
+                return render_template('login.html',
+                                title='Sign In',
+                                form=form, message="Неверные данные")
+        else:
+            return render_template('login.html',
+                            title='Sign In',
+                            form=form, message="Неверные данные")
 
         #читаем список подписок нашего пользоваетеля
         subscriptions = vvv.users.getSubscriptions(user_id=int(aaa), extended=1, version=5.0, timeout=10, count=200)
@@ -351,11 +367,9 @@ def login():
                 outputCount -= 1
 
 
-    if form.validate_on_submit():
-        return redirect('/index')
     return render_template('login.html',
         title = 'Sign In',
-        form = form)
+        form = form, message = "")
 
 def RepresentsInt(s):
     try:
