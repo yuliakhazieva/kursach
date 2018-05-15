@@ -14,11 +14,11 @@ from app import app_this
 from forms import LoginForm
 import vk
 
-#читаем пароль из файлика
+#читаем пароль из файла
 with open('tokenFile.txt', 'r') as f:
     password = f.read()
 
-#стартуем сессии в обоих либах
+#стартуем сессии в обоих библиотеках
 session = vk.AuthSession(6470661, 'oppasaranhae@gmail.com', password)
 session.requests_session.keep_alive = False
 api = vk.API(session)
@@ -26,10 +26,12 @@ vk_session = vk_api.VkApi('oppasaranhae@gmail.com', password, scope='subscriptio
 vk_session.auth()
 vvv = vk_session.get_api()
 
-#словари для мап редьюс
+#словари для вывода
 outputTable = {'':''}
 outputTable2 = {'':''}
 friends = {'':''}
+
+#словари для мап редьюс
 mapUserToLists = {}
 mapGroupToSubscribers = {}
 mapGroupToSubscribersRes = {}
@@ -37,7 +39,6 @@ mapGroupToSubscribersRes = {}
 @app_this.route('/')
 @app_this.route('/index', methods=['GET', 'POST'])
 def index():
-
     return render_template("index.html",
         title = 'Рекомендации пабликов',
         outputTable = outputTable, outputTable2 = outputTable2, friends = friends)
@@ -49,24 +50,23 @@ def login():
     if request.method == 'POST':
 
         #парсим значение формы с ссылкой на профиль
-        aaa = ''
-        aaa = form.userid.data
-        if aaa[:9] == 'vk.com/id':
-            if not RepresentsInt(aaa[9:]):
-                aaa = ''
-        elif aaa[:7] == 'vk.com/':
-            aaa = vvv.users.get(user_ids = aaa[7:])[0]['id']
-            print(aaa)
+        userid_from_form = form.userid.data
+        if userid_from_form[:9] == 'vk.com/id':
+            if not RepresentsInt(userid_from_form[9:]):
+                userid_from_form = ''
+        elif userid_from_form[:7] == 'vk.com/':
+            userid_from_form = vvv.users.get(user_ids = userid_from_form[7:])[0]['id']
         else:
-            aaa = ''
+            userid_from_form = ''
 
         #читаем прочие формы
         subscriptionsCountInput = form.Subscriptionscount.data
         friendsCountInput = form.FriendsCount.data
 
+        #если неверный ввод
         if form.validate_on_submit():
             if RepresentsInt(subscriptionsCountInput) and RepresentsInt(friendsCountInput):
-                if subscriptionsCountInput >= 1 and friendsCountInput >= 1 and aaa[:7] == 'vk.com/':
+                if subscriptionsCountInput >= 1 and friendsCountInput >= 1 and userid_from_form[:7] == 'vk.com/':
                     return redirect('/index')
                 else:
                     return render_template('login.html',
@@ -99,7 +99,6 @@ def login():
         print('init')
         print(df)
         print(publics_df)
-
 
         #из указанного количества подписок берем пользователей
         for t in range(0, subscriptionsCountInput):
@@ -237,7 +236,6 @@ def login():
         #считаем коэф пирсона
         print('pearson now')
         for index, row in df.iterrows():
-            print(index)
             sumOfgrades = int(df.at[index, 'count'])*(int(df.at[index, 'count']) + 1)/2
             userAvr = sumOfgrades / (len(df.columns) - 3)
 
@@ -246,7 +244,6 @@ def login():
             userSquaredSum = 0
 
             for col in range (3, df.shape[1] - 1):
-                print(col)
                 userDiff = int(df.iat[index, col]) - userAvr
                 ourDiff = int(df.iat[0, col]) - ourAvr
                 multSum += userDiff * ourDiff
@@ -261,16 +258,11 @@ def login():
 
         print('pearson')
         print(df)
-        print(publics_df)
 
         df = df.sort_values('pearson', ascending=0)
-        print('sorted')
-        print(df)
-        print(publics_df)
 
         print('filling friends')
         session2 = vk.AuthSession(6470661, 'oppasaranhae@gmail.com', password)
-        # session.requests_session.keep_alive = False
         api2 = vk.API(session2)
         for f in range(1, 11):
             print(f)
@@ -284,12 +276,10 @@ def login():
         df.index = range(0, df.shape[0])
         print('reindexed')
         print(df)
-        print(publics_df)
 
         df.drop(df.iloc[:, 3:subscriptions['count']+3], inplace=True, axis=1)
         print('dropped we are already subscribed to')
         print(df)
-        print(publics_df)
 
         print('count recommendability')
         #рассчитываем показатель рекоммендованности
@@ -305,7 +295,6 @@ def login():
         df = df[df.columns[df.ix[df.last_valid_index()].argsort()]]
         print('sorted by rec rank')
         print(df)
-        print(publics_df)
 
         R_df =  df.drop(['pearson', 'count'], axis=1)
         R_df.set_index('userid')
@@ -329,7 +318,6 @@ def login():
 
         predictions_df = predictions_df.loc[[0]]
         predictions_df = predictions_df[predictions_df.columns[predictions_df.ix[predictions_df.last_valid_index()].argsort()]]
-        print (predictions_df)
 
         outputCount = 15
         f = df.shape[1] - 1
@@ -338,7 +326,6 @@ def login():
         print('index moved')
         print(publics_df)
         session1 = vk.AuthSession(6470661, 'oppasaranhae@gmail.com', password)
-        # session.requests_session.keep_alive = False
         api1 = vk.API(session1)
         with pd.option_context('display.max_rows', None, 'display.max_columns', 3):
             print(publics_df)
@@ -346,26 +333,17 @@ def login():
             f-=1
             time.sleep(0.3)
             if api1.groups.getMembers(group_id=df.columns[f], sort="id_asc", version=5.0, timeout=10)['count'] < 1000000:
-                print('f')
-                print(f)
-                print('df.columns[f]')
-                print(df.columns[f])
-                print('publics_df.at[df.columns[f], public_name')
-                print(publics_df.at[df.columns[f], 'public_name'])
-
                 outputTable[publics_df.at[df.columns[f], 'public_name']] = 'vk.com/public' + str(df.columns[f])
                 outputCount -= 1
 
         f = predictions_df.shape[1]
         outputCount = 15
         while outputCount != 0 and f != 0:
-            print('lalalla')
             f-=1
             time.sleep(0.3)
             if api.groups.getMembers(group_id=df.columns[f], sort="id_asc", version=5.0, timeout=10)['count'] < 1000000:
                 outputTable2[publics_df.at[df.columns[f], 'public_name']] = 'vk.com/public' + str(df.columns[f])
                 outputCount -= 1
-
 
     return render_template('login.html',
         title = 'Sign In',
@@ -377,12 +355,3 @@ def RepresentsInt(s):
         return True
     except ValueError:
         return False
-
-def checkForTripleMatch(membersubs, subscriptions):
-    count = 0
-    for sub in membersubs:
-        if sub in subscriptions:
-            count+=1
-            if count == 5:
-                return True
-    return False

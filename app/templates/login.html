@@ -4,46 +4,52 @@
 
 {% block content %}
     <div style="margin-top: 10%">
-<h1>ГЕНЕРАТОР РЕКОМЕНДУЕМЫХ ПУБЛИЧНЫХ СТРАНИЦ VK</h1>
+        <h1>ГЕНЕРАТОР РЕКОМЕНДУЕМЫХ ПУБЛИЧНЫХ СТРАНИЦ VK</h1>
         <p style="color: red">{{ message }}</p>
-    <p>
-    Данный сервис использует алгоритм коллаборативной фильтрации и нейросети для того чтобы найти новые паблики под ваш персональный вкус!
-    </p><p>Сервис не имеет никакого отношения к команде vk.com и создан сторонним разработчиком.
-    </p>
+        <p>Данный сервис использует алгоритм коллаборативной фильтрации и нейросети для того чтобы найти новые паблики под ваш персональный вкус!</p>
+        <p>Сервис не имеет никакого отношения к команде vk.com и создан сторонним разработчиком.</p>
         <br>
         <div style="border: #FFFFFF; border: 4px solid #ef8e0e; width: 80%; margin-left: 10%">
-        <p>Ссылка на ваш профиль</p>
-<form action="" method="post" name="login">
-    {{form.hidden_tag()}}
-        <div id = "formProfile" style = "margin-right: 0%">
-        {{form.userid(size=30, placeholder='vk.com/IvanIvanovichIvanov')}}<br>
-        </div >
+            <p>Ссылка на ваш профиль</p>
+            <form action="" method="post" name="login">{{form.hidden_tag()}}
+                <div id = "formProfile" style = "margin-right: 0%">
+                    {{form.userid(size=30, placeholder='vk.com/IvanIvanovichIvanov')}}<br>
+                </div >
+            </form>
 
-    <p>Сколько пабликов из вашего списка подписок анализировать? Чем выше число, тем дольше будут вычисления, но точнее результат</p>
-<form action="" method="post" name="login">
-    {{form.hidden_tag()}}
-        <div id = "formSubscriptionscount" style = "margin-right: 0%">
-        {{form.Subscriptionscount(size=30, placeholder='147')}}<br>
-        </div >
+            <p>Сколько пабликов из вашего списка подписок анализировать? Чем выше число, тем дольше будут вычисления, но точнее результат</p>
+            <form action="" method="post" name="login">{{form.hidden_tag()}}
+                <div id = "formSubscriptionscount" style = "margin-right: 0%">
+                    {{form.Subscriptionscount(size=30, placeholder='147')}}<br>
+                </div >
+            </form>
 
-    <p>Сколько друзей по интересам отобрать до финального анализа?</p><p> Рекомендуемое значение: 200, рекомендумемые границы: 100 - 1 000. </p><p>Чем выше число, тем дольше будут вычисления, но точнее результат.</p>
-<div action="" method="post" name="login">
-    {{form.hidden_tag()}}
-        <div id = "formFriendsCount" style = "margin-right: 0%">
-        {{form.FriendsCount(size=30, placeholder='200')}}<br>
-        </div >
+            <p>Сколько друзей по интересам отобрать до финального анализа?</p><p> Рекомендуемое значение: 200, рекомендумемые границы: 100 - 1 000. </p><p>Чем выше число, тем дольше будут вычисления, но точнее результат.</p>
+            <form action="" method="post" name="login">{{form.hidden_tag()}}
+                <div id = "formFriendsCount" style = "margin-right: 0%">
+                    {{form.FriendsCount(size=30, placeholder='200')}}<br>
+                </div >
+            </form>
 
+{#            <div class="clicker" tabindex="1">#}
+                <p style="margin-right: 0%">
+                <input type="submit" class="clicker" onclick="onSubmitClick()" value="Сгенерировать"></p>
+{#            </div>#}
 
-    <div class="clicker" tabindex="1">
-    <p style="margin-right: 0%">
-    <input type="submit" value="Сгенерировать"></p></div>
-    </div>
-    <div class="hiddendiv"><img src="https://vk.com/doc21875431_465851457?hash=f3c945dd39f5c614e2&dl=38ec63d231c0e52503&wnd=1&module=im" height="50"></div>
-    <br>
-    <br>
+            <div class="hiddendiv"><img src="https://vk.com/doc21875431_465851457?hash=f3c945dd39f5c614e2&dl=38ec63d231c0e52503&wnd=1&module=im" height="50"></div>
+
+            <br>
+            <br>
+            <script type="text/javascript">
+                function onSubmitClick() {
+                    let hidden = document.getElementsByClassName("hiddendiv")[0];
+                    hidden.style.display = "block";
+                }
+            </script>
+            </div>
     <p>Для связи: oppasaranhae@gmail.com</p>
     <p>НИУ ВШЭ 2018 Хазиева Юлия руководитель: Ахметсафина Римма Закиевна</p>
 
 
-</form></div>
+    </div>
 {% endblock %}
